@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Gym Workout Tracker</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --card:#121923;
+      --muted:#95a3b8;
+      --text:#e8eef7;
+      --accent:#4da3ff;
+      --line:#243244;
+      --good:#2ecc71;
+      --warn:#ffcc66;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.35;
+    }
+    .wrap{
+      max-width:900px;
+      margin:0 auto;
+      padding:16px 14px 36px;
+    }
+    h1{
+      font-size:1.6rem;
+      margin:0 0 6px;
+    }
+    .sub{
+      color:var(--muted);
+      margin:0 0 16px;
+      font-size:.95rem;
+    }
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin:0 0 16px;
+    }
+    button, .file-label{
+      appearance:none;
+      border:none;
+      background:var(--accent);
+      color:white;
+      padding:10px 12px;
+      border-radius:10px;
+      font-weight:600;
+      cursor:pointer;
+      font-size:.95rem;
+    }
+    button.secondary, .file-label.secondary{
+      background:#1b2735;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+    input[type="file"]{display:none}
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      margin:0 0 14px;
+      box-shadow:0 8px 24px rgba(0,0,0,.18);
+    }
+    .workout-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .workout-head h2{
+      margin:0;
+      font-size:1.15rem;
+    }
+    .last{
+      color:var(--warn);
+      font-size:.9rem;
+      text-align:right;
+      min-width:120px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.6fr .9fr .9fr .9fr;
+      gap:8px;
+      align-items:center;
+    }
+    .grid.header{
+      color:var(--muted);
+      font-size:.82rem;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      margin-bottom:8px;
+    }
+    .row{
+      padding:8px 0;
+      border-top:1px solid var(--line);
+    }
+    .exercise{
+      font-weight:600;
+    }
+    .meta{
+      color:var(--muted);
+      font-size:.85rem;
+      margin-top:3px;
+    }
+    input, textarea, select{
+      width:100%;
+      padding:10px 10px;
+      border-radius:10px;
+      border:1px solid #304154;
+      background:#0f151d;
+      color:var(--text);
+      font-size:.95rem;
+    }
+    textarea{
+      min-height:72px;
+      resize:vertical;
+    }
+    .footer-note{
+      color:var(--muted);
+      font-size:.9rem;
+      margin-top:12px;
+    }
+    .pill{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#0f151d;
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:.85rem;
+      margin-top:6px;
+    }
+    .save-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .save-status{
+      color:var(--good);
+      font-size:.9rem;
+      align-self:center;
+    }
+    .section-title{
+      font-size:1rem;
+      margin:4px 0 10px;
+      color:#cfe1ff;
+    }
+    .small{
+      font-size:.84rem;
+      color:var(--muted);
+    }
+    @media (max-width: 700px){
+      .grid{
+        grid-template-columns: 1fr;
+      }
+      .grid.header{
+        display:none;
+      }
+      .row{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+      }
+      .exercise-box{
+        grid-column:1 / -1;
+      }
+      .last{
+        text-align:left;
+        min-width:auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Hotel Gym Workout Tracker</h1>
+    <p class="sub">Track your hotel-gym workouts, weights used, notes, and the last date performed. Data saves on your device.</p>
+
+    <div class="toolbar">
+      <button onclick="saveAll()">Save all</button>
+      <button class="secondary" onclick="exportData()">Export data</button>
+      <label class="file-label secondary">Import data<input type="file" id="importFile" accept=".json" /></label>
+      <button class="secondary" onclick="clearAll()">Clear all</button>
+    </div>
+
+    <div id="app"></div>
+
+    <div class="card">
+      <div class="section-title">How this works</div>
+      <div class="small">
+        This page stores your entries in your browser using local storage. If you open it in the same browser on your phone or tablet, your data stays there.
+        To move it between devices, use <b>Export data</b> and then <b>Import data</b>.
+      </div>
+    </div>
+  </div>
+
+<script>
+const workouts = [
+  {
+    key: "push",
+    title: "Workout A — Push",
+    focus: "Chest / Shoulders / Triceps",
+    exercises: [
+      {name:"Dumbbell Bench Press", reps:"4 × 8–12"},
+      {name:"Incline Dumbbell Press", reps:"3 × 10–12"},
+      {name:"Seated Dumbbell Shoulder Press", reps:"3 × 8–12"},
+      {name:"Overhead DB Triceps Extension", reps:"3 × 12–15"},
+      {name:"Bench Dips", reps:"3 × max"}
+    ]
+  },
+  {
+    key: "pull",
+    title: "Workout B — Pull",
+    focus: "Back / Biceps",
+    exercises: [
+      {name:"Single Arm Dumbbell Row", reps:"4 × 8–12"},
+      {name:"Chest Supported DB Row", reps:"3 × 10–12"},
+      {name:"Incline Dumbbell Curl", reps:"3 × 10–12"},
+      {name:"Hammer Curl", reps:"3 × 10–12"},
+      {name:"Rear Delt Fly", reps:"3 × 12–15"}
+    ]
+  },
+  {
+    key: "legs",
+    title: "Workout C — Legs & Core",
+    focus: "Legs / Core",
+    exercises: [
+      {name:"Goblet Squat", reps:"4 × 10–15"},
+      {name:"Bulgarian Split Squat", reps:"3 × 8–12 each"},
+      {name:"DB Romanian Deadlift", reps:"3 × 10–12"},
+      {name:"Step Ups", reps:"3 × 10 each"},
+      {name:"Weighted Sit Ups", reps:"3 × 15–20"}
+    ]
+  },
+  {
+    key: "express",
+    title: "30-Minute Express",
+    focus: "Full Body",
+    exercises: [
+      {name:"Goblet Squats", reps:"3 × 15"},
+      {name:"DB Bench Press", reps:"3 × 12"},
+      {name:"Single Arm Rows", reps:"3 × 12 each"},
+      {name:"DB Romanian Deadlift", reps:"3 × 12"},
+      {name:"Plank", reps:"3 × 45 sec"}
+    ]
+  }
+];
+
+const storageKey = "hotel_gym_tracker_v1";
+
+function defaultData(){
+  const base = {};
+  workouts.forEach(w => {
+    base[w.key] = {
+      date: "",
+      notes: "",
+      exercises: {}
+    };
+    w.exercises.forEach(ex => {
+      base[w.key].exercises[ex.name] = {weight:"", done:""};
+    });
+  });
+  return base;
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(storageKey);
+    if(!raw) return defaultData();
+    const parsed = JSON.parse(raw);
+    return mergeDefaults(parsed);
+  }catch(e){
+    return defaultData();
+  }
+}
+
+function mergeDefaults(data){
+  const base = defaultData();
+  for(const wk of workouts){
+    if(data[wk.key]){
+      base[wk.key].date = data[wk.key].date || "";
+      base[wk.key].notes = data[wk.key].notes || "";
+      for(const ex of wk.exercises){
+        if(data[wk.key].exercises && data[wk.key].exercises[ex.name]){
+          base[wk.key].exercises[ex.name] = {
+            weight: data[wk.key].exercises[ex.name].weight || "",
+            done: data[wk.key].exercises[ex.name].done || ""
+          };
+        }
+      }
+    }
+  }
+  return base;
+}
+
+let appData = loadData();
+
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  workouts.forEach(w => {
+    const card = document.createElement("div");
+    card.className = "card";
+    const performed = appData[w.key].date ? formatDate(appData[w.key].date) : "Not logged yet";
+    card.innerHTML = `
+      <div class="workout-head">
+        <div>
+          <h2>${w.title}</h2>
+          <div class="pill">${w.focus}</div>
+        </div>
+        <div class="last">Last performed:<br><b>${performed}</b></div>
+      </div>
+
+      <div class="grid header">
+        <div>Exercise</div>
+        <div>Target</div>
+        <div>Weight</div>
+        <div>Completed</div>
+      </div>
+    `;
+
+    w.exercises.forEach(ex => {
+      const row = document.createElement("div");
+      row.className = "grid row";
+      row.innerHTML = `
+        <div class="exercise-box">
+          <div class="exercise">${ex.name}</div>
+          <div class="meta">${ex.reps}</div>
+        </div>
+        <div><input value="${ex.reps}" disabled /></div>
+        <div><input placeholder="e.g. 50 lb" value="${escapeHtml(appData[w.key].exercises[ex.name].weight)}"
+             onchange="updateExercise('${w.key}','${jsSafe(ex.name)}','weight', this.value)" /></div>
+        <div><input placeholder="Y / partial / skip" value="${escapeHtml(appData[w.key].exercises[ex.name].done)}"
+             onchange="updateExercise('${w.key}','${jsSafe(ex.name)}','done', this.value)" /></div>
+      `;
+      card.appendChild(row);
+    });
+
+    const extra = document.createElement("div");
+    extra.style.marginTop = "12px";
+    extra.innerHTML = `
+      <div class="grid">
+        <div>
+          <label class="small">Workout date</label>
+          <input type="date" value="${appData[w.key].date}" onchange="updateWorkout('${w.key}','date', this.value)" />
+        </div>
+        <div style="grid-column: span 3;">
+          <label class="small">Notes</label>
+          <textarea onchange="updateWorkout('${w.key}','notes', this.value)" placeholder="How it felt, rep PRs, hotel, travel fatigue, etc.">${escapeHtml(appData[w.key].notes)}</textarea>
+        </div>
+      </div>
+      <div class="save-row">
+        <button onclick="markToday('${w.key}')">Mark today</button>
+        <button class="secondary" onclick="saveAll()">Save</button>
+        <span class="save-status" id="status-${w.key}"></span>
+      </div>
+    `;
+    card.appendChild(extra);
+    app.appendChild(card);
+  });
+}
+
+function jsSafe(text){
+  return text.replace(/'/g, "\\'");
+}
+
+function escapeHtml(str){
+  return (str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function updateExercise(workoutKey, exName, field, value){
+  appData[workoutKey].exercises[exName][field] = value;
+  saveAll(false, workoutKey);
+}
+
+function updateWorkout(workoutKey, field, value){
+  appData[workoutKey][field] = value;
+  saveAll(false, workoutKey);
+  render();
+}
+
+function markToday(workoutKey){
+  const today = new Date();
+  const local = new Date(today.getTime() - today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  appData[workoutKey].date = local;
+  saveAll(false, workoutKey);
+  render();
+}
+
+function saveAll(showAlert=true, workoutKey=null){
+  localStorage.setItem(storageKey, JSON.stringify(appData));
+  if(workoutKey){
+    const el = document.getElementById(`status-${workoutKey}`);
+    if(el){
+      el.textContent = "Saved";
+      setTimeout(() => el.textContent = "", 1200);
+    }
+  }
+  if(showAlert) alert("Saved on this device.");
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(appData, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "hotel-gym-tracker-data.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("importFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const txt = await file.text();
+    const data = JSON.parse(txt);
+    appData = mergeDefaults(data);
+    saveAll(false);
+    render();
+    alert("Import complete.");
+  }catch(err){
+    alert("Could not import that file.");
+  }
+  e.target.value = "";
+});
+
+function clearAll(){
+  if(!confirm("Clear all saved workout data on this device?")) return;
+  appData = defaultData();
+  localStorage.removeItem(storageKey);
+  render();
+}
+
+function formatDate(yyyyMmDd){
+  if(!yyyyMmDd) return "";
+  const [y,m,d] = yyyyMmDd.split("-");
+  const dt = new Date(Number(y), Number(m)-1, Number(d));
+  return dt.toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"});
+}
+
+render();
+</script>
+</body>
+</html>
